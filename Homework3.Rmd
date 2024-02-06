@@ -1,0 +1,138 @@
+---
+title: "Homework3"
+author: "Alex Arroyo"
+date: "2024-02-02"
+output: pdf_document
+editor_options: 
+  markdown: 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+### UTID: "aa87723"
+
+Github: "<https://github.com/alexvarroyo/SDS315>"
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(readr)
+library(tidyverse)
+library(ggplot2)
+library(kableExtra)
+library(tibble)
+library(mosaic)
+```
+
+```{r, echo=FALSE , warning=FALSE, include=FALSE}
+creatinine <- read_csv("Downloads/SDS/creatinine.csv")
+hw2_table_ <- read_csv("Downloads/SDS/hw2_table .csv")
+marketmodel <- read_csv("Downloads/SDS/marketmodel.csv")
+covid <- read_csv("Downloads/SDS/covid.csv")
+milk <- read_csv("Downloads/SDS/milk.csv")
+age_hw3 <- read_csv("Downloads/SDS/age_hw3.csv")
+hw2_table_ <- read_csv("Downloads/SDS/hw2_table .csv")
+```
+
+# Problem 1
+
+Looking at the Creatinine levels across multiple people from various ages. 
+
+```{r echo=FALSE, warning=FALSE, , echo=FALSE}
+ggplot(creatinine) + geom_point(aes(x=age, y=creatclear)) + geom_smooth(aes(x=age, y=creatclear), method='lm')
+
+```
+
+```{r include=FALSE}
+lm(formula = creatclear~age, data = creatinine)
+
+```
+
+
+### Creatclear = 147.81 +(age * -0.6198)
+
+Therefore, for someone aged 55 the predicted would be 113.72
+
+## Part B 
+Based on the graph, and the linear regression model, one can see that as age increases one unit, in this case year, the creatclear clearance in mL per minute decreases 0.6198.
+
+## Part C 
+```{r, echo=FALSE}
+kable_styling(kbl(age_hw3, col.names= c("Age", "Predicted", "Actual", "Residual")))
+```
+When comparing whose creatinine clearance rate is healthier (higher) for their age: a 40-year-old with a rate of 135, or a 60-year-old with a rate of 112?
+First it is important to notice that there are two different ages in which are being examined.
+Therefore, to fairly compare, it would be best to see which has the higher positive residual.
+When plugging in 40 into the formula to find the predicted creatclear amount it would be 123.02, versus her actual amount of 135, meaning her clearance rate in ml/Minute is 11.98 units higher than predicted.
+Now looking at the 60- year old, their predicted amount would turn out to be 110.62, while their actual was 112, only 1.38 higher than predicted.
+Now, there are two numbers in which can actually be compared to in a fair manner since they have been adjusted to fit the same standards one can see that since the 40 year old had a higher residual, they are "healthier" given their age.
+
+
+
+# Problem 2 
+
+Capital Asset Pricing Model 
+
+  In order to understand the beta of a stock, it is important to note how it is calculated. In light terms, the beta of a stock is determined by the systematic risk of that stock. So when in terms of how the number affects the stock, if the market portfolio changes by 1%, then beta is the percentage change in the stocks return. Where the higher the beta, the bigger change percentage in the stock return whether good or bad; making both the risk and reward of that stock higher as well. When a stock has a beta that is between 0 and 1, the return of the stock when the market goes up 1% will not be as significant as a beta that is 1.5. However, if the market were to go down, then the return for the higher beta would be negatively affected more. Linking it back to the formula, this makes sense since beta is the slope or "percent change" times the rate of return of the entire stock market which is the market change, plus the residual for the specific stock would finally result in the rate of return of an individual stock. 
+```{r, echo=FALSE}
+return_model <- lm(cbind(AAPL, TGT, GOOG, MRK,JNJ, WMT) ~ SPY, data = marketmodel)
+# Use the "summary(return_model)" function in order to find the needed data
+hw3_table<- hw2_table_[,-1]
+as_tibble(hw3_table)
+```
+### Graph 
+
+The graph shows the ticker symbol for each stock that is shown in the dataset, and then the intercept which is refered to as "Alpha" in terms of stocks and the formula, then the slope which is the beta or percent change of the stock, and then the residual squared which helps to highlight the margin of error in the regression model. 
+
+### Highest vs Lowest risk?
+
+ Based on the information above about how beta measures risk, as well as the table which shows the slope (beta) of each stock it can be concluded that out of the six stocks shown in the dataset WMT, Walmart, has the least systematic risk since it is the closest one to 0 out of the rest, while AAPL, apple, has the highest risk potential. 
+ 
+# Problem 3
+Covid Deaths in Italy and Spain 
+```{r, echo=FALSE}
+covid_spain <- covid %>%
+  filter(country=="Spain")
+covid_italy<- covid %>%
+  filter(country=="Italy")
+ggplot(covid_spain)+ geom_point(aes(x=days_since_first_death, y=log(deaths))) + geom_smooth(aes(x=days_since_first_death, y=log(deaths))) + labs(title="Covid Deaths in Spain", x="Days since the First reported Covid Death", y="Log(Deaths)")
+ggplot(covid_italy)+ geom_point(aes(x=days_since_first_death, y=log(deaths))) + geom_smooth(aes(x=days_since_first_death, y=log(deaths))) + labs(title="Covid Deaths in Italy", x="Days since the First reported Covid Death", y="Log(Deaths)")
+spain_model <- lm(formula = log(deaths)~days_since_first_death, data = covid_spain)
+italy_model <- lm(formula = log(deaths)~days_since_first_death, data = covid_italy)
+coef(spain_model)
+coef(italy_model)
+```
+
+Therefore the intercept for the spain model is .465 and the growth rate is 27.624%.
+Meaning the doubling time for the covid cases in spain is around 3 days.
+
+### Italy Statistics
+
+For Italy, the intercept was 1.01, and the growth rate was 18.322%.
+That means that the doubling time in Italy for covid cases was around 4 days.
+
+### line Graph for Deaths Over Time
+
+```{r, echo=FALSE}
+# Line graph for the deaths over time 
+ggplot(covid) + geom_line(aes(x=days_since_first_death, y= deaths, color=country)) + labs( title= "Covid Deaths Since First Death", x= "Days since First Death", "Deaths")
+
+```
+
+
+
+# Problem 4 : Elasticity of Milk 
+
+> Looking at the price of milk 
+
+```{r, echo=FALSE}
+milk$log_price <- log(milk$price)
+milk$log_sales <- log(milk$sales)
+milk_model <- lm(log_sales ~ log_price, data = milk)
+ggplot(milk) + geom_point(aes(x=log(price), y= log(sales))) + labs(title= "Demand vs. price in Log scale for milk", x='log of price', y='log of sales')
+coef(milk_model)
+
+``` 
+When wanting to look for the elasticity we need to look at the relative proportion change, so to do so I decided to take the natural log of both the x and y values that i was looking at. So that meant I needed to take the log of the milk prices, and then the log of the sales, and then I was able to fit it to a linear scale using the power law and look at what the change was. Therfore, the elasticity of milk is -1.62 meaning that for every time the price of milk increases by 1%, there is a drop in sales by 1.62%. 
