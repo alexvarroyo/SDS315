@@ -1,0 +1,181 @@
+---
+title: "homework_4"
+author: "Alex Arroyo"
+date: "2024-02-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(readr)
+library(tidyverse)
+library(mosaic)
+library(tibble)
+library(ggplot2)
+library(dplyr)
+gasprices <- read_csv("Downloads/SDS/gasprices.csv")
+sclass <- read_csv("Downloads/SDS/sclass.csv")
+nbc_pilotsurvey <- read_csv("Downloads/SDS/nbc_pilotsurvey.csv")
+ebay <- read_csv("Downloads/SDS/ebay.csv")
+```
+
+## Theory A: Gas stations charge more if they lack direct competition in sight
+
+```{r}
+gasprice_bootstrap = mosaic::resample(gasprices)
+mean(~Price, data=gasprice_bootstrap)
+boot_gas_comp = do(10000)*diffmean(Price ~ Competitors, data=mosaic::resample(gasprices))
+ggplot(boot_gas_comp) + geom_histogram(aes(x=diffmean))
+confint(boot_gas_comp, level = 0.95)
+```
+
+The first theory claims that gas station will charge more if there is no other gas station directly competeting with them, allowing them to charge more. In order to assess this theory, I decided to take the data and bootstrap it 10,000 times in order to see how the data would hypothethecally look if it was able to be repeated multiple times. Then in order to see if there was really a significant difference I made a histogram to see if any of the multiple samples have a difference of 0\$ bewteen gas stations with competetors or not.
+
+ What I found was that the prices of gas between those with direct competetors and not, differed on average between -0.056\$ (around 5.6 cents), and 0.007\$ (around 7/10ths of a cent) with 95% confidence. Since the estimate does contain zero, this would make this claim statistically insignificant.
+
+## Claim that The richer the area the higher the Prices
+
+```{r}
+mean(~Price, data=gasprice_bootstrap)
+boot_gas_inc = do(10000)*lm(Price ~ Income, data=mosaic::resample(gasprices))
+ggplot(boot_gas_inc) + 
+  geom_histogram(aes(x=Income))
+confint(boot_gas_inc, level = 0.95) %>% filter(name == "Income")
+
+```
+Based on the bootstrap, the data shows that the richer the area, the more the gas station will charge. After doing the bootstrap, I had to use a linear model to show the realtionship might be too small to stand out. Then in order to see the confidence interval with 95% certainty I saw that the lower end is 6.6e-07, and upper change is 1.76e-06. While this means that the difference is statstically significant, the difference is still very very minimal for it to be practically significant. 
+
+
+## Gas Stations at Stoplights Charge more
+
+```{r}
+stoplight_price = gasprices %>% 
+  mutate(stoplight= ifelse(IntersectionStoplight != 'Both', yes=TRUE, no= FALSE ))
+boot_stoplight = do(10000)*diffmean(Price~stoplight,data=mosaic::resample(stoplight_price))
+ggplot(boot_stoplight) + 
+  geom_histogram(aes(x=diffmean))
+confint(boot_stoplight, level = 0.95)
+```
+In order to see if the claim that gas stations charge more if they are at a stoplight, I once again did a bootstrap of the data and had it look at the the difference in the mean of the prices based of if it was at a stoplight or not. What I found was that the difference in means with 95% confidence is between -0.03 and 0.03 dollars so the difference is either 3 cents more or 3 cents less. Meaning that the claim would not be statistically significant since it involves 0. 
+
+
+## Gas Stations with direct highway access charge more
+
+```{r}
+highway_price = gasprices %>% 
+  mutate(yeshighway= ifelse(Highway == 'Y', yes=TRUE, no= FALSE ))
+boot_highway = do(10000)*diffmean(Price~yeshighway, data=mosaic::resample(highway_price))
+ggplot(boot_highway) + 
+  geom_histogram(aes(x=diffmean))
+
+```
+To see if gas stations with direct access to the highways charge more, the bootstrap I did involved taking the difference in means between those gas stations that were next to a highway and then those that were not. What I found was that based on the bootstrap, the difference in means did include 0, meaning with 95% confidence that there is a chance that the difference in means between gas staions next to a highway and not is 0. 
+Therefore making making it not statistically significant. 
+## Shell charges more than all other Non- Shell Brands
+
+```{r}
+shell_price = gasprices %>% 
+  mutate(shell= ifelse(Brand == 'Shell', yes=TRUE, no= FALSE ))
+prop(~shell, data=shell_price)
+boot_shell = do(10000)*diffprop(Price~shell, data=mosaic::resample(shell_price))
+ggplot(boot_shell) + 
+  geom_histogram(aes(x=diffprop))
+confint(boot_shell, level= 0.95)
+```
+To see if the claim that shell charges more as well, I did another bootstrap but this time with proportion and got the mean of the proportion of gas stations that were shell brands and then other. Since the the difference in price is between -0.09 and 0.05, with 95% confidence, we could say that this claim is statistically insignificant. 
+# Problem 2
+
+### Part A) Mileage for s-class from 2011 and 63 AMG 
+```{r}
+sclass_filter<- sclass %>%
+  filter(sclass$year == 2011)
+sclass_filter <- sclass_filter %>%
+  filter(trim== "63 AMG")
+boot_class = do(10000)*mean(~mileage, data= mosaic::resample(sclass_filter))
+ggplot(boot_class)+ 
+  geom_histogram(aes(x=mean))
+confint(boot_class, level=0.95)
+```
+
+The average mileage for an s class car from 2011 with sub model of a 63 AMG, is somewhere bewteen 26,269.07 miles and 31,861.55 miles with 95% confidence. 
+
+#### The average mileage , with 95% confidence is between 26,285 and 31,796 miles.
+
+## Part B
+
+```{r}
+filter_550 <- sclass %>%
+  filter(sclass$year == 2014) 
+filter_550 <- filter_550 %>%
+  filter(trim == "550")
+black_550 <- filter_550 %>%
+  mutate(black=ifelse(color== "Black", yes= TRUE, no= FALSE))
+prop(~black, data= black_550)
+boot_black = do(10000)*prop(~black, data=mosaic::resample(black_550))
+ggplot(boot_black) + 
+  geom_histogram((aes(x=prop_TRUE)))
+confint(boot_black, level = 0.95)
+```
+
+In order to see what proportion of cars were painted black from the cars that were made in 2014 and were the 550 model, I did a bootstrap of proportions to see whether the filtered data that now fits the description was either black or another color. With 95% confidence one could say that the proportion of cars that were black was between 42% and 45%. Therefore it is statistically significant since the proportion does not contain 0. 
+# Problem 3
+
+Part A) Who makes people happier: Ed or Earl?
+
+```{r}
+filtered_show <- nbc_pilotsurvey %>%
+  filter(Show %in% c("My Name is Earl","Living with Ed"))
+mean(Q1_Happy~Show, data=filtered_show)
+diffmean(Q1_Happy~Show, data=filtered_show)
+boot_show = do(10000)*diffmean(Q1_Happy ~ Show, data=mosaic::resample(filtered_show))
+ggplot(boot_show) + 
+  geom_histogram(aes(x=diffmean))
+confint(boot_show, level = 0.95)
+```
+The approach I took was by doing a difference in means of the Q1_Happy variable based on what show it was
+The results I got were that the difference in happiness ratings ranged from -.40 and 0.11, meaning that the difference in average happiness based on show changed from either show with 95% confidence. 
+
+No there is not evidence to show that one of the shows make people happier than the other. This is because the mean from this one sample tells us that Living with Ed has a higher average happiness rating by 0.149. However, if this sample was able to be repeated multiple times, then the difference could be favored in "My Name is Earls" favor. 
+
+Part B) Which reality/contest show made people feel more annoyed?
+
+```{r}
+filtered_reality <- nbc_pilotsurvey %>%
+  filter(Show %in% c("The Biggest Loser","The Apprentice: Los Angeles"))
+mean(Q1_Annoyed~Show, data=filtered_reality)
+diffmean(Q1_Annoyed~Show, data=filtered_reality)
+boot_reality = do(10000)*diffmean(Q1_Annoyed ~ Show, data=mosaic::resample(filtered_reality))
+ggplot(boot_reality) + 
+  geom_histogram(aes(x=diffmean))
+confint(boot_reality, level = 0.95)
+
+
+```
+
+There is no evidence to show that one show makes more people annoyed on avergae, since we do a 95% confidence interval, and "0" is a value of the difference in means, then that means taht the difference is not statistically significant.
+
+```{r}
+filtered_dancing <- nbc_pilotsurvey %>%
+  filter(Show == "Dancing with the Stars")
+filtered_dancing <- filtered_dancing %>%
+  mutate(confused=ifelse(Q2_Confusing >= 4 , yes= TRUE, no= FALSE))
+prop(~confused, data= filtered_dancing)
+boot_dance = do(10000)*prop(~confused, data=mosaic::resample(filtered_dancing))
+ggplot(boot_dance) + 
+  geom_histogram((aes(x=prop_TRUE)))
+confint(boot_dance, level = 0.95)
+```
+
+# Problem 4
+
+```{r}
+by_control = ebay %>% group_by(adwords_pause)
+control_rev_diff = do(10000)*diffmean(rev_ratio ~ adwords_pause, data=sample_n(by_control, 1))
+ggplot(control_rev_diff) + 
+  geom_histogram(aes(x=diffmean))
+confint(control_rev_diff, level = 0.95)
+```
