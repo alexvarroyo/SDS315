@@ -1,0 +1,126 @@
+---
+title: "Homework9"
+author: "Alex Arroyo"
+date: "2024-04-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(mosaic)
+library(ggplot2)
+library(MatchIt)
+turnout <- read_csv("Downloads/SDS/turnout.csv")
+solder <- read_csv("Downloads/SDS/solder.csv")
+```
+
+## Part A
+
+
+
+```{r}
+call_counts <- table(turnout$GOTV_call, turnout$voted1998)
+prop_table <- prop.table(call_counts)
+prop_table
+```
+Proportion of voters who received the "get out the vote" call 
+The proportion was 0.014 for all the people who received a call that voted in 1998.
+
+The proportion was 0.43 for all the people who did not receive a call and voted in 1998.
+## Part B
+
+Make a 95% confidence interval of all of those who voted in 1998 and the difference of proportion between those who did recieve a GOTV call and those who didnt
+
+```{r, echo=FALSE}
+voted_1998_data <- subset( turnout, voted1998 == 1)
+prop.table(table(voted_1998_data$GOTV_call))
+diffprop(voted1998 ~ GOTV_call, data=turnout)
+boot_vote = do(1000)*diffprop(voted1998 ~ GOTV_call, data=resample(turnout))
+ggplot(boot_vote) +
+  geom_histogram(aes(x=diffprop))
+```
+
+## Part B
+
+Provide evidence that at all three of these variables are confounders that prevent the difference you observed in Part A from representing the true causal effect of the GOTV call on the likelihood that a person voted in 1998. To be a cofounder, this means that another variable would affect the chances of the individual recieving a call AND for them to have voted in 1998
+
+```{r, echo= FALSE}
+lm_nochange = lm(voted1998 ~ GOTV_call, data= turnout)
+coef(lm_nochange)
+lm_vote = lm(voted1998 ~ GOTV_call + voted1996 , data=turnout)
+coef(lm_vote)
+lm2 = lm(voted1998 ~ GOTV_call + AGE, data = turnout)
+coef(lm2)
+lm3 = lm(voted1998 ~ GOTV_call + MAJORPTY, data = turnout)
+coef(lm3)
+```
+
+In order to see if the variables are all cofounders I looked at whether the baseline of what the chances are if someone recieved a call and voted in 1998. With this as a baseline, I then accounted for each variable to see if it was a cofounding variable by accounting for the variable and seeing if the rate in GOTV_call changed. If it does, then it means that once we do account for the variable then it changes the rate of GOTV calls and is indeed a cofounding variable.
+
+## Part C
+
+Matching the data
+
+```{r, echo= FALSE}
+vote_match = matchit(GOTV_call ~ voted1998 + voted1996 + AGE + MAJORPTY, data = turnout, ratio=5) %>% match.data
+mean(voted1996 ~ GOTV_call, data=vote_match)
+
+```
+
+Here the in order to see if the data is now matched and that the cofounding variables are now balanced with the data I looked at the difference of whether they got a call or not based on each variable and can see that there is no difference based on any of the other variables.
+
+```{r, echo = FALSE}
+
+xtabs(~voted1996  + GOTV_call, data=vote_match) %>%
+  prop.table(margin=2)
+xtabs(~AGE  + GOTV_call, data=vote_match) %>%
+  prop.table(margin=2) %>% 
+  head(5)
+xtabs(~MAJORPTY  + GOTV_call, data=vote_match) %>%
+  prop.table(margin=2)
+
+prop(GOTV_call ~ voted1998, data = vote_match)
+
+diffprop(voted1998 ~ GOTV_call, data=vote_match)
+boot_vote2 = do(1000)*diffprop(voted1998 ~ GOTV_call, data=resample(vote_match))
+ggplot(boot_vote2) +
+  geom_histogram(aes(x=diffprop))
+
+```
+
+Due to the plot that is shown, once we have taken into account all the other cofounding variables and have adjusted and match for them, one can see that the difference in proportion is not significant. This is because the graph includes zero, therefore there are possibiltiues that there is no difference between the chances that someone voted in 1998 and recieved a call once we have accounted for all the co foudning variables.
+
+# Problem 2
+
+Two plots in order to show the difference in skips based on the two different variables, the size of the opening, and the solder size.
+
+```{r, echo=FALSE}
+ggplot(solder) + 
+  geom_jitter(aes(x = Opening, y = skips), color = "hotpink")
+ggplot(solder) + 
+  geom_jitter(aes(x = Solder, y = skips), color = "purple")
+
+```
+
+There is a noticeable difference in the number of skips based on the thickness of the solder whether it is thick or thin. There is also a noticeable difference in the number of skips based on the size of the opening since variation of points for each opening size differs.
+
+```{r}
+lm_solder = lm(skips ~ Solder + Opening + Solder:Opening, data=solder)
+coef(lm_solder) %>% round(2)
+confint(lm_solder, level = 0.95) %>%
+  round(2)
+
+```
+
+In order to make build a regression model for the solder type and opening size I accounted for both the variables and then also the interaction between the two as well and saw the affect of all possiblities. The intercept shows the solder being thick and the opening being large, and each other possiblity are the different variations and how it changes the rate of skips. The lower the skips, the better the variation.
+
+### Part C
+
+Here one can see that the baseline skips would be shown by the intercept which is .39 while the main effect of the solder being thin is 2.28. Where as the main effect of the opening being medium is 2.41 add it being small 5.13, both being isolated. Then the main effect for the interaction of the solder being thin and the opening bieng medium is -0.74 and the interaction while it being thin and the opening being small is 9.65
+
+### Part D
+
+Due to the changes that each variable has on the number of skips, the best combination of variables would be a thin Solder and medium opening. This is because the change based on the intercept is the lowest meaning there would be the least amount of skips or flaws shown on the circut board.
