@@ -1,0 +1,110 @@
+---
+title: "Homework10"
+author: "Alex Arroyo"
+date: "2024-04-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(readr)
+knitr::opts_chunk$set(echo = TRUE)
+redlining <- read_csv("Downloads/SDS/redlining.csv")
+groceries <- read_csv("Downloads/SDS/groceries.csv")
+library(ggplot2)
+library(dplyr)
+```
+
+## Part One:
+
+##### What question are we answering:
+
+Using linear regression model to assess whether there is an association between the number of FAIR policies and the racial/ethic composition of a ZIP code. Here we are also adjusting for other variables such as the amount of fires, age of the homes, and income variables. Therefore we are trying to see if there is a correlation between the number of policies and the ethnic makeup of that zip-code, without any of the other variables affecting the correlation.
+
+```{r, echo= FALSE}
+model = lm(policies ~ minority + income + fire + age, data = redlining)
+model 
+ggplot(redlining, aes(x = minority, y = policies)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  xlab("Minority") +
+  ylab("Policies") +
+  ggtitle("Linear Regression Model: Policies vs Minority")
+
+
+```
+
+#### Approach
+
+In order to answer the question, I decided to fit a multiple regression model where I took into account other variables that could be co founders and just focused on what the intercept would be solely based on the policies and minority variables. Then I plotted just the linear regression as is with none of the other variables being adjusted in order to see how the intercept differs.
+
+#### Results
+
+From the linear regression model, I was able to see that the estimated response variable, of policies was at -0.12, and with just minority being accounted for the coefficient was 0.008. Meaning that just holding minority constant, a one unit change in the minorities variable, the policy is expected to change by 0.008. Although there is an association, one also has to take into account what the significance of 0.008 is as compared to the other variables and how much they also affect the FAIR policies. Such as the fire variable which impacts the policy variable by 0.02 and the income variable which has a coefficient of -0.015.
+
+#### Conclusion
+
+Since there was a correlation between the minority variable and the outcome one could say that yes there is an effect, however if calculating p values. One could see that the p value of the minority variable is 0.00611 which is less than the 0.05 threshold and therefore could be considered significant. In conclusion, I would argue that the minority does in fact have a significant enough correlation to the policies.
+
+## Problem 2: Grocery Store Prices
+
+```{r , echo=FALSE}
+mean_prices_store <- groceries %>%
+  group_by(Store) %>%
+  summarize(mean_price = mean(Price, na.rm = TRUE))
+
+ggplot(mean_prices_store, aes(x = Store, y = mean_price)) + geom_bar(stat = "identity", fill = "hotpink") +
+  labs(x = "Store", y = "Mean Price", title = "Mean Price by Store") +
+  theme_minimal() +
+  coord_flip() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+#### Product versus Count of Stores selling the specified prodcut
+
+```{r, echo= FALSE}
+count_store = groceries %>% 
+  group_by(Product) %>%
+  summarize(count = length(Store))
+
+ggplot(count_store, aes(x= Product, y = count)) + geom_bar(stat = "identity", fill = "skyblue") + 
+  labs(x = 'Product', y = "Number of Stores Carrying ", title = "Count of Stores Carrying Each Product") + 
+  coord_flip() +
+  theme(axis.text.y = element_text(angle = 25, hjust = 1, size = 5))
+
+```
+
+```{r, echo = FALSE}
+aggregate_price <- aggregate(Price ~ Product + Type, data = groceries, FUN = mean)
+model_price <- lm(Price ~ Product + Type, data = aggregate_price)
+conf_interval <- confint(model_price)
+conf_interval <- round(conf_interval, 2)
+
+```
+
+Compared to ordinary grocery stores, convenience stores charge anywhere from .89 to .29 more dollars for the same product.
+
+```{r, echo=FALSE}
+agg_price2 <- aggregate(Price ~ Product + Store, data = groceries, FUN=mean)
+model_store <- lm(Price ~ Product + Store, data = agg_price2)
+
+
+```
+
+When comparing the same product, one can see that the the two stores with the lowest prices for the same product are Walmart and the Kroger Fresh Fare. While the stores that have the highest prices are Whole Foods and Wheatsville Food Co-Op.
+
+#### Price Discrimination
+
+Based on the model, when looking at the price difference between Central Market and H-E-B, the difference between the two is an average of 0.04935, for the same product. Although this does show a difference, it is also important to look at this difference in comparison to how other stores also match up to the prices of H-E-B where in the grand scheme of the data set, many of the other stores have a much larger difference in price for the same products, and therefor hard go justify that Central Market just has higher prices overall. This makes it more believable that the difference in prices many people see between the two has more to do with the difference in products that are sold at Central Market.
+
+#### Income Difference
+
+```{r, echo=FALSE}
+ groceries = groceries %>%
+  mutate(Income10K = cut(Income, breaks = seq(10000, max(groceries$Income) + 10000, by = 10000),labels = FALSE)) 
+agg_income <- aggregate(Price ~ Product + Income10K, data = groceries, FUN = mean)
+model_income = lm(Price ~ Product + Income10K, data = groceries)
+
+```
+Based on the model, consumers in poorer zip codes tend to pay more since the higher the income, shows a negative relation with price and therefor, people in richer zipcodes are essentially paying less. 
